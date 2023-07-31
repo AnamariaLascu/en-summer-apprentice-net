@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using TMS.Api.Exceptions;
 using TMS.Api.Models.Dto;
 using TMS.Api.Repositories;
 
@@ -12,31 +13,19 @@ namespace TMS.Api.Controllers
     {
         private readonly IEventRepository _eventRepository;
         private readonly IMapper _mapper;
-        private readonly ILogger _logger;
 
-        public EventController(IEventRepository eventRepository, IMapper mapper, ILogger<EventController> logger)
+        public EventController(IEventRepository eventRepository, IMapper mapper)
         {
             _eventRepository = eventRepository;
             _mapper = mapper;
-            _logger = logger;
+      
         }
 
         [HttpGet]
         public ActionResult<List<EventDto>> GetAll()
         {
             var events = _eventRepository.GetAll();
-
-            /* var dtoEvents = events.Select(e => new EventDto()
-             {
-                 EventId = e.EventId,
-                 EventDescription = e.EventDescription,
-                 EventName = e.EventName,
-                 EventType = e.EventType?.EventTypeName ?? string.Empty,
-                 Venue = e.Venue?.Location ?? string.Empty
-             });*/
-            // var eventsDto = _mapper.Map<EventDto>(@event);
             var eventsDto = events.Select(e => _mapper.Map<EventDto>(e));
-
             return Ok(eventsDto);
         }
 
@@ -44,26 +33,17 @@ namespace TMS.Api.Controllers
         [HttpGet]
         public async  Task<ActionResult<EventDto>> GetById(int id)
         {
-           
-                var @event = await _eventRepository.GetById(id);
-
-            if (@event == null)
+            try
             {
-                return NotFound();
+                var @event = await _eventRepository.GetById(id);
+                var eventDto = _mapper.Map<EventDto>(@event);
+                return Ok(eventDto);
+            }
+            catch (EntityNotFoundException ex)
+            {
+                return NotFound(new { ErrorMessage = ex.Message });
             }
 
-            //var dtoEvent = new EventDto()
-            //{
-            //    EventId = @event.EventId,
-            //    EventDescription = @event.EventDescription,
-            //    EventName = @event.EventName,
-            //    EventType = @event.EventType?.EventTypeName ?? string.Empty,
-            //    Venue = @event.Venue?.Location ?? string.Empty
-            //};
-
-            var eventDto = _mapper.Map<EventDto>(@event);
-                return Ok(eventDto);
-            
         }
         [HttpPatch]
         public async Task<ActionResult<EventPatchDto>> Patch(EventPatchDto eventPatch)

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Data;
+using TMS.Api.Exceptions;
 using TMS.Api.Models.Dto;
 using TMS.Api.Repositories;
 
@@ -14,31 +15,19 @@ namespace TMS.Api.Controllers
     {
         private readonly IOrderRepository _orderRepository;
         private readonly IMapper _mapper;
-        private readonly ILogger _logger;
 
-        public OrderController(IOrderRepository orderRepository, IMapper mapper, ILogger<OrderController> logger)
+        public OrderController(IOrderRepository orderRepository, IMapper mapper)
         {
             _orderRepository = orderRepository;
             _mapper = mapper;
-            _logger = logger;
+            
         }
 
         [HttpGet]
         public ActionResult<List<OrderDto>> GetAll()
         {
             var orders = _orderRepository.GetAll();
-
-            /*var dtoOrders = orders.Select(o => new OrderDto()
-            {
-               OrderId = o.OrderId,
-               OrderedAt = o.OrderedAt,
-                NumberOfTickets = o.NumberOfTickets,
-                TotalPrice = o.TotalPrice,
-                Customer = o.Customer?.CustomerName ?? string.Empty,
-                TicketCategory = o.TicketCategory?.Description ?? string.Empty
-            });*/
             var ordersDto = orders.Select(o => _mapper.Map<OrderDto>(o));
-
             return Ok(ordersDto);
         }
 
@@ -46,25 +35,16 @@ namespace TMS.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<OrderDto>> GetById(int id)
         {
-            var @order = await _orderRepository.GetById(id);
-
-            if (@order == null)
+            try
             {
-                return NotFound();
+                var @order = await _orderRepository.GetById(id);
+                var orderDto = _mapper.Map<OrderDto>(@order);
+                return Ok(orderDto);
             }
-
-            /* var dtoOrder = new OrderDto()
-             {
-                 OrderId = @order.OrderId,
-                 OrderedAt = @order.OrderedAt,
-                 NumberOfTickets = @order.NumberOfTickets,
-                 TotalPrice = @order.TotalPrice,
-                 Customer = @order.Customer?.CustomerName ?? string.Empty,
-                 TicketCategory = @order.TicketCategory?.Description ?? string.Empty
-             };*/
-            var orderDto =_mapper.Map<OrderDto>(@order);
-
-            return Ok(orderDto);
+            catch (EntityNotFoundException ex)
+            {
+                return NotFound(new { ErrorMessage = ex.Message });
+            }
 
 
         }

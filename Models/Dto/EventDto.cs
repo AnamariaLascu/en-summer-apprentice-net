@@ -11,5 +11,9 @@
         public string EventType { get; set; }
 
         public string Venue { get; set; }
+
+        public int EventTypeId { get; set; }
+
+        public int VenueId { get; set; }
     }
 }
